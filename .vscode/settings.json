@@ -1,0 +1,11 @@
+{
+    "editor.formatOnSave": false,
+    "stylelint.validate": ["css", "scss", "less"],
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit"
+    },
+    "cSpell.words": [
+        "denormalize",
+        "denormalized"
+    ]
+}
