@@ -1,15 +1,49 @@
+/**
+ * Fiber 树节点类型
+ */
 interface FiberNode {
+    /**
+     * 标签类型
+     */
     type: 'TEXT_ELEMENT' | keyof HTMLElementTagNameMap;
+    /**
+     * 属性
+     */
     props?: {
+        /**
+         * 后代虚拟DOM元素
+         */
         children: FiberNode[];
     } & Record<string, unknown>;
+    /**
+     * 对应的真实 DOM
+     */
     dom?: HTMLElement | Text | null;
+    /**
+     * 直接子节点
+     */
     child?: FiberNode;
+    /**
+     * 直接父节点
+     */
     parent?: FiberNode;
+    /**
+     * 直接兄弟节点
+     */
     sibling?: FiberNode;
+    /**
+     * 若为文本节点，则存储文本内容
+     */
     textContent?: string;
 }
 
+/**
+ * 创建虚拟 DOM 元素
+ * @param type 标签
+ * @param props 属性
+ * @param children 后代元素
+ * @returns 虚拟 DOM 元素
+ */
 export const createElement = (
     type: FiberNode['type'],
     props: Record<string, unknown> | null,
@@ -24,6 +58,11 @@ export const createElement = (
     };
 };
 
+/**
+ * 根据传入fiber 树节点创建对应的 DOM
+ * @param fiberNode fiber 树节点
+ * @returns fiber 树节点对应的真实 DOM
+ */
 const createDOM = (fiberNode: FiberNode) => {
     const dom =
         fiberNode.type == 'TEXT_ELEMENT'
@@ -40,6 +79,11 @@ const createDOM = (fiberNode: FiberNode) => {
     return dom;
 };
 
+/**
+ * 构建当前的 fiber 的节点，并返回下一个工作节点
+ * @param fiberNode fiber 树节点
+ * @returns 下一个 fiber 树工作节点
+ */
 const performUnitOfWork = (fiberNode: FiberNode) => {
     if (!fiberNode.dom) fiberNode.dom = createDOM(fiberNode);
     let preChildFiber: FiberNode | null = null;
@@ -68,7 +112,14 @@ const performUnitOfWork = (fiberNode: FiberNode) => {
     }
 };
 
+/**
+ * 下一个 fiber 工作节点
+ */
 let nextUnitOfWork: FiberNode | null | undefined = null;
+
+/**
+ * 正在构建的fiber树的根引用
+ */
 let workInProgressRoot: FiberNode | null | undefined = null;
 
 const commitWork = (fiber: FiberNode | null | undefined) => {
@@ -86,6 +137,9 @@ function commitRoot() {
     workInProgressRoot = null;
 }
 
+/**
+ * react 工作循环
+ */
 const workLoop: IdleRequestCallback = (deadline) => {
     let shouldYield = false;
     while (nextUnitOfWork && !shouldYield) {
@@ -101,6 +155,11 @@ const workLoop: IdleRequestCallback = (deadline) => {
 
 window.requestIdleCallback(workLoop);
 
+/**
+ * 将虚拟 DOM 转为真实 DOM 并挂载到容器内
+ * @param element 虚拟 DOM
+ * @param container 真实 DOM 容器
+ */
 export const render = (element: FiberNode, container: HTMLElement) => {
     workInProgressRoot = {
         type: 'div',

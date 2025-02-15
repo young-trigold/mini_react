@@ -31,4 +31,3 @@ const result = transformSync(jsx, {
 
 // webpack 插件将 jsx 转为 createElement
 console.log(result.code);
-
