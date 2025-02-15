@@ -118,7 +118,7 @@ const performUnitOfWork = (fiberNode: FiberNode) => {
 let nextUnitOfWork: FiberNode | null | undefined = null;
 
 /**
- * 正在构建的fiber树的根引用
+ * 正在构建的 fiber 树的根引用
  */
 let workInProgressRoot: FiberNode | null | undefined = null;
 
@@ -147,7 +147,7 @@ const workLoop: IdleRequestCallback = (deadline) => {
         shouldYield = deadline.timeRemaining() < 5;
     }
     if (!nextUnitOfWork && workInProgressRoot) {
-        console.log(workInProgressRoot);
+        console.log('workInProgressRoot', workInProgressRoot);
         commitRoot();
     }
     window.requestIdleCallback(workLoop);

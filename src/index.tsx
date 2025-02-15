@@ -100,7 +100,7 @@ const vDOM = (
                     <td>{user.id}</td>
                     <td>{user.familyName + user.givenName}</td>
                     <td>
-                        <img src={user.avatar} />
+                        <img src={user.avatar} width={300} height={300} />
                     </td>
                     <td>{user.gender}</td>
                     <td>{user.phone}</td>
@@ -110,6 +110,6 @@ const vDOM = (
     </table>
 );
 
-console.log(vDOM);
+console.log('vDOM', vDOM);
 
 render(vDOM, document.getElementById('app')!);
