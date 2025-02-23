@@ -1,7 +1,7 @@
 /**
  * Fiber 树节点类型
  */
-interface FiberNode {
+interface Fiber {
     /**
      * 标签类型
      */
@@ -13,7 +13,7 @@ interface FiberNode {
         /**
          * 后代虚拟DOM元素
          */
-        children: FiberNode[];
+        children: Fiber[];
     } & Record<string, unknown>;
     /**
      * 对应的真实 DOM
@@ -22,15 +22,15 @@ interface FiberNode {
     /**
      * 直接子节点
      */
-    child?: FiberNode;
+    child?: Fiber;
     /**
      * 直接父节点
      */
-    parent?: FiberNode;
+    parent?: Fiber;
     /**
      * 直接兄弟节点
      */
-    sibling?: FiberNode;
+    sibling?: Fiber;
     /**
      * 若为文本节点，则存储文本内容
      */
@@ -44,11 +44,7 @@ interface FiberNode {
  * @param children 后代元素
  * @returns 虚拟 DOM 元素
  */
-export const createElement = (
-    type: FiberNode['type'],
-    props: Record<string, unknown> | null,
-    ...children: FiberNode[]
-) => {
+export const createElement = (type: Fiber['type'], props: Record<string, unknown> | null, ...children: Fiber[]) => {
     return {
         type,
         props: {
@@ -60,36 +56,35 @@ export const createElement = (
 
 /**
  * 根据传入fiber 树节点创建对应的 DOM
- * @param fiberNode fiber 树节点
+ * @param fiber fiber 树节点
  * @returns fiber 树节点对应的真实 DOM
  */
-const createDOM = (fiberNode: FiberNode) => {
+const createDOM = (fiber: Fiber) => {
     const dom =
-        fiberNode.type == 'TEXT_ELEMENT'
-            ? document.createTextNode(fiberNode.textContent ?? '')
-            : document.createElement(fiberNode.type);
+        fiber.type == 'TEXT_ELEMENT'
+            ? document.createTextNode(fiber.textContent ?? '')
+            : document.createElement(fiber.type);
     const isProperty = (key: string) => key !== 'children';
-    if (!fiberNode.props) return;
-    Object.keys(fiberNode.props)
-        .filter(isProperty)
-        .forEach((name) => {
-            if (!fiberNode.props) return;
-            dom[name] = fiberNode.props[name];
+    if (!fiber.props) return;
+
+    Object.entries(fiber.props)
+        .filter(([key]) => isProperty(key))
+        .forEach(([key, value]) => {
+            if (key === 'style') {
+                const styleAsString = Object.entries(value)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(';');
+                dom[key] = styleAsString;
+            } else dom[key] = value;
         });
     return dom;
 };
 
-/**
- * 构建当前的 fiber 的节点，并返回下一个工作节点
- * @param fiberNode fiber 树节点
- * @returns 下一个 fiber 树工作节点
- */
-const performUnitOfWork = (fiberNode: FiberNode) => {
-    if (!fiberNode.dom) fiberNode.dom = createDOM(fiberNode);
-    let preChildFiber: FiberNode | null = null;
-    for (let i = 0; i < fiberNode.props.children.length; i++) {
-        const child = fiberNode.props.children[i];
-        const childFiber: FiberNode = { type: child.type, parent: fiberNode, dom: null };
+const reconcile = (fiber: Fiber) => {
+    let preChildFiber: Fiber | null = null;
+    for (let i = 0; i < fiber.props.children.length; i++) {
+        const child = fiber.props.children[i];
+        const childFiber: Fiber = { type: child.type, parent: fiber, dom: null };
         if (child instanceof Object) {
             childFiber.type = child.type;
             childFiber.props = child.props;
@@ -98,12 +93,16 @@ const performUnitOfWork = (fiberNode: FiberNode) => {
             childFiber.props = { children: [] };
             childFiber.textContent = child;
         }
-        if (i === 0) fiberNode.child = childFiber;
+        if (i === 0) fiber.child = childFiber;
         else preChildFiber!.sibling = childFiber;
         preChildFiber = childFiber;
     }
-    if (fiberNode.child) return fiberNode.child;
-    let nextFiber: FiberNode | undefined = fiberNode;
+};
+
+const getNextFiber = (fiber: Fiber) => {
+    // 选择下一个 fiber 工作节点
+    if (fiber.child) return fiber.child;
+    let nextFiber: Fiber | undefined = fiber;
     while (nextFiber) {
         if (nextFiber.sibling) {
             return nextFiber.sibling;
@@ -113,23 +112,38 @@ const performUnitOfWork = (fiberNode: FiberNode) => {
 };
 
 /**
+ * 构建当前的 fiber 的节点，并返回下一个工作节点
+ * @param fiber fiber 树节点
+ * @returns 下一个 fiber 树工作节点
+ */
+const performUnitOfWork = (fiber: Fiber) => {
+    if (!fiber.dom) fiber.dom = createDOM(fiber);
+    // 构建 fiber 子节点
+    reconcile(fiber);
+    return getNextFiber(fiber);
+};
+
+/**
  * 下一个 fiber 工作节点
  */
-let nextUnitOfWork: FiberNode | null | undefined = null;
+let nextUnitOfWork: Fiber | null | undefined = null;
 
 /**
  * 正在构建的 fiber 树的根引用
  */
-let workInProgressRoot: FiberNode | null | undefined = null;
+let workInProgressRoot: Fiber | null | undefined = null;
 
-const commitWork = (fiber: FiberNode | null | undefined) => {
+const commitWork = (fiber: Fiber | null | undefined) => {
     if (!fiber) return;
     if (!fiber.parent) return;
     const domParent = fiber.parent.dom;
     if (!domParent) return;
-    if (fiber.dom) domParent.appendChild(fiber.dom);
-    commitWork(fiber.child);
-    commitWork(fiber.sibling);
+    if (fiber.dom) {
+        // if (fiber.dom instanceof HTMLElement) fiber.dom.style.outline = '2px solid green';
+        domParent.appendChild(fiber.dom);
+    }
+    setTimeout(() => commitWork(fiber.child), 100);
+    setTimeout(() => commitWork(fiber.sibling), 100);
 };
 
 function commitRoot() {
@@ -160,7 +174,7 @@ window.requestIdleCallback(workLoop);
  * @param element 虚拟 DOM
  * @param container 真实 DOM 容器
  */
-export const render = (element: FiberNode, container: HTMLElement) => {
+export const render = (element: Fiber, container: HTMLElement) => {
     workInProgressRoot = {
         type: 'div',
         dom: container,

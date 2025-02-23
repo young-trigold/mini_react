@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { render, createElement } from './mini_react/index.ts';
+import './index.scss';
 /** @jsx createElement */
 const users = [
     {
@@ -85,31 +86,44 @@ const users = [
 ];
 
 const vDOM = (
-    <table>
-        <caption>用户管理表格</caption>
-        <tbody>
-            <tr>
-                <th scope="col">id</th>
-                <th scope="col">姓名</th>
-                <th scope="col">头像</th>
-                <th scope="col">性别</th>
-                <th scope="col">电话</th>
-            </tr>
-            {users.map((user) => (
+    <form className="form">
+        <button type="button" className="add-button">
+            新增
+        </button>
+        <table className="user-table">
+            <caption>用户管理表格</caption>
+            <tbody>
                 <tr>
-                    <td>{user.id}</td>
-                    <td>{user.familyName + user.givenName}</td>
-                    <td>
-                        <img src={user.avatar} width={300} height={300} />
-                    </td>
-                    <td>{user.gender}</td>
-                    <td>{user.phone}</td>
+                    <th scope="col">id</th>
+                    <th scope="col">姓名</th>
+                    <th scope="col">头像</th>
+                    <th scope="col">性别</th>
+                    <th scope="col">电话</th>
+                    <th scope="col">操作</th>
                 </tr>
-            ))}
-        </tbody>
-    </table>
+                {users.map((user) => (
+                    <tr>
+                        <td>{user.id}</td>
+                        <td>{user.familyName + user.givenName}</td>
+                        <td>
+                            <img src={user.avatar} width={50} height={50} />
+                        </td>
+                        <td>{user.gender}</td>
+                        <td>{user.phone}</td>
+                        <td className="operation-col">
+                            <button type="button">更新</button>
+
+                            <button type="button">删除</button>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </form>
 );
 
 console.log('vDOM', vDOM);
 
-render(vDOM, document.getElementById('app')!);
+const rootContainer = document.getElementById('app');
+if (rootContainer) render(vDOM, rootContainer);
+else alert("document.getElementById('app') 为 null");
