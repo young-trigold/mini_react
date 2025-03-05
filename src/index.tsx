@@ -85,43 +85,53 @@ const users = [
     },
 ];
 
-const vDOM = (
-    <form className="form">
-        <button type="button" className="add-button">
-            新增
-        </button>
-        <table className="user-table">
-            <caption>用户管理表格</caption>
-            <tbody>
-                <tr>
-                    <th scope="col">id</th>
-                    <th scope="col">姓名</th>
-                    <th scope="col">头像</th>
-                    <th scope="col">性别</th>
-                    <th scope="col">电话</th>
-                    <th scope="col">操作</th>
-                </tr>
-                {users.map((user) => (
+function App() {
+    const dialogVisible = false;
+
+    const closeDialog = () => {};
+
+    return (
+        <form className="form">
+            <button type="button" className="add-button">
+                新增
+            </button>
+            <div className={`user-dialog closed`}>
+                <button className="dialog-close-button" type="button" onClick={closeDialog}>
+                    关闭
+                </button>
+            </div>
+            <table className="user-table">
+                <caption>用户管理表格</caption>
+                <tbody>
                     <tr>
-                        <td>{user.id}</td>
-                        <td>{user.familyName + user.givenName}</td>
-                        <td>
-                            <img src={user.avatar} width={50} height={50} />
-                        </td>
-                        <td>{user.gender}</td>
-                        <td>{user.phone}</td>
-                        <td className="operation-col">
-                            <button type="button">更新</button>
-
-                            <button type="button">删除</button>
-                        </td>
+                        <th scope="col">id</th>
+                        <th scope="col">姓名</th>
+                        <th scope="col">头像</th>
+                        <th scope="col">性别</th>
+                        <th scope="col">电话</th>
+                        <th scope="col">操作</th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
-    </form>
-);
-
+                    {users.map((user) => (
+                        <tr>
+                            <td>{user.id}</td>
+                            <td>{user.familyName + user.givenName}</td>
+                            <td>
+                                <img src={user.avatar} width={50} height={50} />
+                            </td>
+                            <td>{user.gender}</td>
+                            <td>{user.phone}</td>
+                            <td className="operation-col">
+                                <button type="button">更新</button>
+                                <button type="button">删除</button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </form>
+    );
+}
+const vDOM = App();
 console.log('vDOM', vDOM);
 
 const rootContainer = document.getElementById('app');

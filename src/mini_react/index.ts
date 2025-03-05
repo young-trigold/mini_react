@@ -1,11 +1,39 @@
 /**
+ * 下一个 fiber 工作节点
+ */
+let nextUnitOfWork: Fiber | null | undefined = null;
+
+/**
+ * 正在构建的 fiber 树的根引用
+ */
+let workInProgressRoot: Fiber | null | undefined = null;
+
+/**
+ * react 工作循环
+ */
+const workLoop: IdleRequestCallback = (deadline) => {
+    let shouldYield = false;
+    while (nextUnitOfWork && !shouldYield) {
+        nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+        shouldYield = deadline.timeRemaining() < 5;
+    }
+    if (!nextUnitOfWork && workInProgressRoot) {
+        console.log('workInProgressRoot', workInProgressRoot);
+        commitRoot();
+    }
+    window.requestIdleCallback(workLoop);
+};
+
+window.requestIdleCallback(workLoop);
+
+/**
  * Fiber 树节点类型
  */
 interface Fiber {
     /**
      * 标签类型
      */
-    type: 'TEXT_ELEMENT' | keyof HTMLElementTagNameMap;
+    type: 'TEXT' | keyof HTMLElementTagNameMap;
     /**
      * 属性
      */
@@ -61,9 +89,7 @@ export const createElement = (type: Fiber['type'], props: Record<string, unknown
  */
 const createDOM = (fiber: Fiber) => {
     const dom =
-        fiber.type == 'TEXT_ELEMENT'
-            ? document.createTextNode(fiber.textContent ?? '')
-            : document.createElement(fiber.type);
+        fiber.type == 'TEXT' ? document.createTextNode(fiber.textContent ?? '') : document.createElement(fiber.type);
     const isProperty = (key: string) => key !== 'children';
     if (!fiber.props) return;
 
@@ -80,7 +106,9 @@ const createDOM = (fiber: Fiber) => {
     return dom;
 };
 
-const reconcile = (fiber: Fiber) => {
+// 构建 fiber 子节点
+const beginWork = (fiber: Fiber) => {
+    if (!fiber.dom) fiber.dom = createDOM(fiber);
     let preChildFiber: Fiber | null = null;
     for (let i = 0; i < fiber.props.children.length; i++) {
         const child = fiber.props.children[i];
@@ -89,7 +117,7 @@ const reconcile = (fiber: Fiber) => {
             childFiber.type = child.type;
             childFiber.props = child.props;
         } else {
-            childFiber.type = 'TEXT_ELEMENT';
+            childFiber.type = 'TEXT';
             childFiber.props = { children: [] };
             childFiber.textContent = child;
         }
@@ -99,7 +127,7 @@ const reconcile = (fiber: Fiber) => {
     }
 };
 
-const getNextFiber = (fiber: Fiber) => {
+const completeWork = (fiber: Fiber) => {
     // 选择下一个 fiber 工作节点
     if (fiber.child) return fiber.child;
     let nextFiber: Fiber | undefined = fiber;
@@ -116,22 +144,10 @@ const getNextFiber = (fiber: Fiber) => {
  * @param fiber fiber 树节点
  * @returns 下一个 fiber 树工作节点
  */
-const performUnitOfWork = (fiber: Fiber) => {
-    if (!fiber.dom) fiber.dom = createDOM(fiber);
-    // 构建 fiber 子节点
-    reconcile(fiber);
-    return getNextFiber(fiber);
-};
-
-/**
- * 下一个 fiber 工作节点
- */
-let nextUnitOfWork: Fiber | null | undefined = null;
-
-/**
- * 正在构建的 fiber 树的根引用
- */
-let workInProgressRoot: Fiber | null | undefined = null;
+function performUnitOfWork(fiber: Fiber) {
+    beginWork(fiber);
+    return completeWork(fiber);
+}
 
 const commitWork = (fiber: Fiber | null | undefined) => {
     if (!fiber) return;
@@ -142,32 +158,16 @@ const commitWork = (fiber: Fiber | null | undefined) => {
         // if (fiber.dom instanceof HTMLElement) fiber.dom.style.outline = '2px solid green';
         domParent.appendChild(fiber.dom);
     }
-    setTimeout(() => commitWork(fiber.child), 100);
-    setTimeout(() => commitWork(fiber.sibling), 100);
+    commitWork(fiber.child);
+    commitWork(fiber.sibling);
+    // setTimeout(() => commitWork(fiber.child), 100);
+    // setTimeout(() => commitWork(fiber.sibling), 100);
 };
 
 function commitRoot() {
     commitWork(workInProgressRoot?.child);
     workInProgressRoot = null;
 }
-
-/**
- * react 工作循环
- */
-const workLoop: IdleRequestCallback = (deadline) => {
-    let shouldYield = false;
-    while (nextUnitOfWork && !shouldYield) {
-        nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
-        shouldYield = deadline.timeRemaining() < 5;
-    }
-    if (!nextUnitOfWork && workInProgressRoot) {
-        console.log('workInProgressRoot', workInProgressRoot);
-        commitRoot();
-    }
-    window.requestIdleCallback(workLoop);
-};
-
-window.requestIdleCallback(workLoop);
 
 /**
  * 将虚拟 DOM 转为真实 DOM 并挂载到容器内
