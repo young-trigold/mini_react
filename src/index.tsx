@@ -131,7 +131,8 @@ function App() {
         </form>
     );
 }
-const vDOM = App();
+
+const vDOM = <App />;
 console.log('vDOM', vDOM);
 
 const rootContainer = document.getElementById('app');
