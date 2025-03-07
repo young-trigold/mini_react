@@ -18,7 +18,6 @@ const workLoop: IdleRequestCallback = (deadline) => {
         shouldYield = deadline.timeRemaining() < 5;
     }
     if (!nextUnitOfWork && workInProgressRoot) {
-        console.log('workInProgressRoot', workInProgressRoot);
         commit();
     }
     window.requestIdleCallback(workLoop);
@@ -101,20 +100,26 @@ function commitFiber(fiber: Fiber | null | undefined) {
     commitFiber(fiber.sibling);
 }
 
-/**
- * 将虚拟 DOM 转为真实 DOM 并挂载到容器内
- * @param element 虚拟 DOM
- * @param container 真实 DOM 容器
- */
-export function render(element: Fiber, container: HTMLElement) {
-    workInProgressRoot = {
+export function useState<State>(initialState: State) {
+    return [initialState];
+}
+
+export function createRoot(element: Fiber): { root: Fiber; render: (container: HTMLElement) => void } {
+    const root: Fiber = {
         type: 'div',
-        dom: container,
+        dom: null,
         props: {
             children: [element],
         },
     };
-    nextUnitOfWork = workInProgressRoot;
+    return {
+        root,
+        render(container) {
+            root.dom = container;
+            workInProgressRoot = root;
+            nextUnitOfWork = workInProgressRoot;
+        },
+    };
 }
 
 /**
