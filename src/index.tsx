@@ -8,7 +8,7 @@ function App() {
 
     const closeDialog = () => {};
 
-    const [users] = useState([
+    const [users, setUsers] = useState([
         {
             id: 1,
             familyName: '益',
@@ -93,7 +93,24 @@ function App() {
 
     return (
         <form className="form">
-            <button type="button" className="add-button">
+            <button
+                type="button"
+                className="add-button"
+                onClick={() => {
+                    // debugger;
+                    setUsers((oldUsers) => [
+                        ...oldUsers,
+                        {
+                            id: 11,
+                            familyName: '薛',
+                            givenName: '萧然',
+                            gender: 'Male',
+                            phone: '7432943750',
+                            avatar: 'https://robohash.org/facilisreprehenderitin.png?size=300x300&set=set1',
+                        },
+                    ]);
+                }}
+            >
                 新增
             </button>
             <div className={`user-dialog closed`}>
@@ -140,5 +157,6 @@ const root = createRoot(vDOM);
 console.log('正在构建的 fiber 树：', root.root);
 
 const rootContainer = document.getElementById('app');
+// debugger;
 if (rootContainer) root.render(rootContainer);
 else alert("document.getElementById('app') 为 null");
