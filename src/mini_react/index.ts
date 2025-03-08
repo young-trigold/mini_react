@@ -4,9 +4,19 @@
 let nextUnitOfWork: Fiber | null | undefined = null;
 
 /**
+ * 上一次提交到真实 DOM 的 fiber 树的根引用
+ */
+let lastCommittedRoot: Fiber | null | undefined = null;
+
+/**
  * 正在构建的 fiber 树的根引用
  */
 let workInProgressRoot: Fiber | null | undefined = null;
+
+/**
+ * 正在构建的 fiber 节点
+ */
+let workInProgressFiber: Fiber | null = null;
 
 /**
  * react 工作循环
@@ -39,14 +49,16 @@ function performUnitOfWork(fiber: Fiber) {
  * 构建 fiber 子节点
  */
 function buildFiberTree(fiber: Fiber) {
+    workInProgressFiber = fiber;
     /**
      * 是函数组件
      */
     const isFunctionComponent = fiber.type instanceof Function;
     if (!isFunctionComponent && !fiber.dom) fiber.dom = createDOM(fiber);
-    const children = isFunctionComponent ? [fiber.type(fiber.props)] : fiber.props.children;
+
+    const children = isFunctionComponent ? [fiber.type(fiber.props)] : fiber?.props?.children;
     let preChildFiber: Fiber | null = null;
-    children.forEach((child, childIndex) => {
+    children?.forEach((child, childIndex) => {
         /**
          * 是原始文本
          */
@@ -57,6 +69,8 @@ function buildFiberTree(fiber: Fiber) {
             parent: fiber,
             dom: null,
             textContent: child as unknown as string,
+            useStateHooks: [],
+            alternate: null,
         };
         if (childIndex === 0) fiber.child = childFiber;
         else preChildFiber!.sibling = childFiber;
@@ -82,7 +96,8 @@ function getNextFiberNode(fiber: Fiber) {
  * 提交 fiber root 上的所有离屏 DOM 到真实 DOM
  */
 function commit() {
-    commitFiber(workInProgressRoot.child);
+    commitFiber(workInProgressRoot!.child);
+    lastCommittedRoot = workInProgressRoot;
     workInProgressRoot = null;
 }
 
@@ -100,9 +115,38 @@ function commitFiber(fiber: Fiber | null | undefined) {
     commitFiber(fiber.sibling);
 }
 
-export function useState<State>(initialState: State) {
-    return [initialState];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface UseStateHook<State = any> {
+    state: State;
+    actions: ((previousState: State) => State)[];
 }
+
+interface UseState {
+    <State>(initialState: State): [State, (action: (previousState: State) => State) => void];
+    index?: number;
+}
+
+export const useState: UseState = <State>(initialState: State) => {
+    if (!useState.index) useState.index = 0;
+    const oldHook = workInProgressFiber?.useStateHooks?.[useState.index];
+    const hook: UseStateHook<State> = {
+        state: oldHook ? oldHook.state : initialState,
+        actions: [],
+    };
+    const setState = (action: (previousState: State) => State) => {
+        hook.actions.push(action);
+        workInProgressRoot = {
+            type: workInProgressFiber!.type,
+            dom: lastCommittedRoot?.dom,
+            props: lastCommittedRoot?.props,
+            alternate: lastCommittedRoot,
+        };
+        nextUnitOfWork = workInProgressFiber;
+    };
+    workInProgressFiber?.useStateHooks?.push?.(hook);
+    useState.index++;
+    return [hook.state, setState];
+};
 
 export function createRoot(element: Fiber): { root: Fiber; render: (container: HTMLElement) => void } {
     const root: Fiber = {
@@ -156,7 +200,7 @@ function createDOM(fiber: Fiber) {
         .filter(([key]) => isProperty(key))
         .forEach(([key, value]) => {
             if (key === 'style') {
-                const styleAsString = Object.entries(value)
+                const styleAsString = Object.entries(value as object)
                     .map(([key, value]) => `${key}: ${value}`)
                     .join(';');
                 dom[key] = styleAsString;
@@ -204,4 +248,12 @@ interface Fiber {
      * 若为文本节点，则存储文本内容
      */
     textContent?: string;
+    /**
+     * use state hook
+     */
+    useStateHooks?: UseStateHook[];
+    /**
+     * 可复用的 fiber
+     */
+    alternate?: Fiber | null;
 }
