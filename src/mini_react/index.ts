@@ -1,38 +1,24 @@
-/**
- * 下一个 fiber 工作节点
- */
-let nextUnitOfWork: Fiber | null | undefined = null;
+import { createDOM, updateDom } from './react-dom.ts';
+import { Fiber, MiniReact } from './type.ts';
 
-/**
- * 上一次提交到真实 DOM 的 fiber 树的根引用
- */
-let lastCommittedRoot: Fiber | null | undefined = null;
-
-/**
- * 正在构建的 fiber 树的根引用
- */
-let workInProgressRoot: Fiber | null | undefined = null;
-
-/**
- * 正在构建的 fiber 节点
- */
-let workInProgressFiber: Fiber | null = null;
-
-/**
- * 需要删除的 fiber 节点
- */
-let deletedFibers: Fiber[] = [];
+export const miniReact: MiniReact = {
+    nextUnitOfWork: null,
+    lastCommittedRoot: null,
+    workInProgressRoot: null,
+    workInProgressFiber: null,
+    deletedFibers: [],
+};
 
 /**
  * react 工作循环
  */
 const workLoop: IdleRequestCallback = (deadline) => {
     let shouldYield = false;
-    while (nextUnitOfWork && !shouldYield) {
-        nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+    while (miniReact.nextUnitOfWork && !shouldYield) {
+        miniReact.nextUnitOfWork = performUnitOfWork(miniReact.nextUnitOfWork);
         shouldYield = deadline.timeRemaining() < 5;
     }
-    if (!nextUnitOfWork && workInProgressRoot) {
+    if (!miniReact.nextUnitOfWork && miniReact.workInProgressRoot) {
         commit();
     }
     window.requestIdleCallback(workLoop);
@@ -49,8 +35,8 @@ function performUnitOfWork(fiber: Fiber) {
     /**
      * 函数组件类型的 fiber
      */
-    if (fiber.type instanceof Function) buildFunctionComponentFiber(fiber);
-    else buildHostComponentFiber(fiber);
+    if (fiber.type instanceof Function) buildFunctionComponentFibers(fiber);
+    else buildHostComponentFibers(fiber);
     return getNextFiberNode(fiber);
 }
 
@@ -58,15 +44,15 @@ function performUnitOfWork(fiber: Fiber) {
  * 更新
  * @param fiber fiber 节点
  */
-function buildFunctionComponentFiber(fiber: Fiber) {
-    workInProgressFiber = fiber;
+function buildFunctionComponentFibers(fiber: Fiber) {
+    miniReact.workInProgressFiber = fiber;
     fiber.useStateHookIndex = 0;
-    workInProgressFiber.useStateHooks = [];
+    miniReact.workInProgressFiber.useStateHooks = [];
     const children = [(fiber.type as (props: Fiber['props']) => Fiber)(fiber.props)];
     reconcileChildren(fiber, children);
 }
 
-function buildHostComponentFiber(fiber: Fiber) {
+function buildHostComponentFibers(fiber: Fiber) {
     if (!fiber.dom) fiber.dom = createDOM(fiber);
     reconcileChildren(fiber, fiber?.props?.children ?? []);
 }
@@ -119,7 +105,7 @@ function reconcileChildren(fiber: Fiber, children: Fiber[]) {
         if (oldChild && !sameType) {
             // delete
             oldChild.tag = 'DELETE';
-            deletedFibers.push(oldChild);
+            miniReact.deletedFibers.push(oldChild);
         }
 
         if (childIndex === 0) fiber.child = newFiber!;
@@ -149,10 +135,10 @@ function getNextFiberNode(fiber: Fiber) {
  * 提交 fiber root 上的所有离屏 DOM 到真实 DOM
  */
 function commit() {
-    deletedFibers.forEach(commitFiber);
-    commitFiber(workInProgressRoot!.child);
-    lastCommittedRoot = workInProgressRoot;
-    workInProgressRoot = null;
+    miniReact.deletedFibers.forEach(commitFiber);
+    commitFiber(miniReact.workInProgressRoot!.child);
+    miniReact.lastCommittedRoot = miniReact.workInProgressRoot;
+    miniReact.workInProgressRoot = null;
 }
 
 function commitFiber(fiber: Fiber | null | undefined) {
@@ -182,205 +168,4 @@ function commitDeletion(fiber: Fiber | null | undefined, parentDOM: HTMLElement 
     } else {
         commitDeletion(fiber.child, parentDOM);
     }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface UseStateHook<State = any> {
-    state: State;
-    actions: ((previousState: State) => State)[];
-}
-
-interface UseState {
-    <State>(initialState: State): [State, (action: (previousState: State) => State) => void];
-    index?: number;
-}
-
-/**
- * 状态钩子
- * @param initialState 初始状态
- */
-export const useState: UseState = <State>(initialState: State) => {
-    const oldHook = workInProgressFiber?.useStateHooks?.[workInProgressFiber!.useStateHookIndex!];
-    const hook: UseStateHook<State> = {
-        state: oldHook ? oldHook.state : initialState,
-        actions: [],
-    };
-    oldHook?.actions?.forEach((action) => {
-        hook.state = action(hook.state);
-    });
-    const setState = (action: (previousState: State) => State) => {
-        hook.actions.push(action);
-        workInProgressRoot = {
-            type: 'div',
-            dom: lastCommittedRoot?.dom,
-            props: lastCommittedRoot?.props,
-            alternate: lastCommittedRoot,
-        };
-        nextUnitOfWork = workInProgressRoot;
-    };
-    workInProgressFiber?.useStateHooks?.push?.(hook);
-    workInProgressFiber!.useStateHookIndex!++;
-    return [hook.state, setState];
-};
-
-/**
- * 创建一个 fiber 根用来渲染
- * @param element 虚拟 DOM
- * @returns 渲染函数
- */
-export function createRoot(element: Fiber): { root: Fiber; render: (container: HTMLElement) => void } {
-    const root: Fiber = {
-        type: 'div',
-        dom: null,
-        props: {
-            children: [element],
-        },
-        alternate: lastCommittedRoot,
-    };
-    return {
-        root,
-        render(container) {
-            deletedFibers = [];
-            root.dom = container;
-            workInProgressRoot = root;
-            nextUnitOfWork = workInProgressRoot;
-        },
-    };
-}
-
-/**
- * 创建虚拟 DOM 元素
- * @param type 标签
- * @param props 属性
- * @param children 后代元素
- * @returns 虚拟 DOM 元素
- */
-export function createElement(type: Fiber['type'], props: Record<string, unknown> | null, ...children: Fiber[]) {
-    return {
-        type,
-        props: {
-            ...(props ?? {}),
-            children: children.flat(),
-        },
-    };
-}
-
-const isProperty = (key: string) => key !== 'children';
-const isEvent = (key: string) => key.startsWith('on');
-
-/**
- * 根据传入fiber 树节点创建对应的 DOM
- * @param fiber fiber 树节点
- * @returns fiber 树节点对应的真实 DOM
- */
-function createDOM(fiber: Fiber) {
-    const dom =
-        fiber.type == 'TEXT'
-            ? document.createTextNode(fiber.textContent ?? '')
-            : document.createElement(fiber.type as keyof HTMLElementTagNameMap);
-    updateDom(dom, undefined, fiber.props);
-    return dom;
-}
-
-const isNew =
-    (prev: Fiber['props'] = { children: [] }, next: Fiber['props'] = { children: [] }) =>
-    (key: string) =>
-        prev[key] !== next[key];
-const isGone =
-    (_, next: Fiber['props'] = { children: [] }) =>
-    (key: string) =>
-        !(key in next);
-
-function updateDom(
-    dom: HTMLElement | Text,
-    prevProps: Fiber['props'] = { children: [] },
-    nextProps: Fiber['props'] = { children: [] },
-) {
-    //Remove old or changed event listeners
-    Object.keys(prevProps)
-        .filter(isEvent)
-        .filter((key) => !(key in nextProps) || isNew(prevProps, nextProps)(key))
-        .forEach((name) => {
-            const eventType = name.toLowerCase().substring(2);
-            dom.removeEventListener(eventType, prevProps[name] as EventListenerOrEventListenerObject);
-        });
-    // Remove old properties
-    Object.keys(prevProps)
-        .filter(isProperty)
-        .filter(isGone(prevProps, nextProps))
-        .forEach((name) => {
-            dom[name] = '';
-        });
-    // Set new or changed properties
-    Object.keys(nextProps)
-        .filter(isProperty)
-        .filter(isNew(prevProps, nextProps))
-        .forEach((name) => {
-            dom[name] = nextProps[name];
-        });
-    // Add event listeners
-    Object.keys(nextProps)
-        .filter(isEvent)
-        .filter(isNew(prevProps, nextProps))
-        .forEach((name) => {
-            const eventType = name.toLowerCase().substring(2);
-            dom.addEventListener(eventType, nextProps[name] as EventListenerOrEventListenerObject);
-        });
-}
-
-/**
- * Fiber 树节点类型
- */
-interface Fiber {
-    /**
-     * fiber 类型
-     * 如果是一个函数，则为函数组件
-     * 否则是一个 html 元素标签
-     */
-    readonly type: 'TEXT' | keyof HTMLElementTagNameMap | ((props: Fiber['props']) => Fiber);
-    /**
-     * 属性
-     */
-    props?: {
-        /**
-         * 后代虚拟DOM元素
-         */
-        children: Fiber[];
-    } & Record<string, unknown>;
-    /**
-     * 对应的真实 DOM
-     */
-    dom?: HTMLElement | Text | null;
-    /**
-     * 直接子节点
-     */
-    child?: Fiber;
-    /**
-     * 直接父节点
-     */
-    parent?: Fiber;
-    /**
-     * 直接兄弟节点
-     */
-    sibling?: Fiber;
-    /**
-     * 若为文本节点，则存储文本内容
-     */
-    textContent?: string;
-    /**
-     * use state hook
-     */
-    useStateHooks?: UseStateHook[];
-    /**
-     * use state hook index
-     */
-    useStateHookIndex?: number;
-    /**
-     * 可复用的 fiber
-     */
-    alternate?: Fiber | null;
-    /**
-     * 当前 fiber 的来源类型
-     */
-    tag?: 'UPDATE' | 'ADD' | 'DELETE';
 }

@@ -30,13 +30,19 @@
 
     .user-dialog {
         position: fixed;
+        display: flex;
+        flex-direction: column;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
         z-index: 1;
         width: 50%;
         height: 400px;
-        background-color: green;
+        background-color: white;
+        border-radius: 1em;
+        box-shadow: 0 0 5px rgb(0 0 0 / 10%);
+        padding: 2em;
+        transition: all 0.3s ease-in-out;
 
         &.closed {
             visibility: hidden;
@@ -46,6 +52,33 @@
             position: absolute;
             top: 0;
             right: 0;
+        }
+
+        .dialog-body {
+            .filed {
+                margin: 1em 0;
+
+                label {
+                    margin-right: 2em;
+
+                    &::after {
+                        content: '：';
+                    }
+                }
+            }
+        }
+
+        .dialog-header {
+            align-self: center;
+        }
+
+        .dialog-footer {
+            align-self: flex-end;
+            margin-top: auto;
+
+            button:last-of-type {
+                margin-left: 2em;
+            }
         }
     }
 }

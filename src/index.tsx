@@ -1,12 +1,61 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { createRoot, createElement, useState } from './mini_react/index.ts';
+import { useState } from './mini_react/hooks.ts';
+import { createRoot, createElement } from './mini_react/react-dom.ts';
 /** @jsx createElement */
+import { SetStateAction } from './mini_react/type.ts';
 import './index.scss';
 
-function App() {
-    const dialogVisible = false;
+interface UserDialogProps {
+    dialogVisible: boolean;
+    setDialogVisible: (action: SetStateAction<boolean>) => void;
+    mode: 'add' | 'update';
+}
 
-    const closeDialog = () => {};
+function UserDialog(props: UserDialogProps) {
+    const { dialogVisible, setDialogVisible } = props;
+
+    const closeDialog = () => {
+        setDialogVisible(false);
+    };
+
+    return (
+        <div className={`user-dialog ${dialogVisible ? '' : 'closed'}`}>
+            <button className="dialog-close-button" type="button" onClick={closeDialog}>
+                关闭
+            </button>
+            <header className="dialog-header">新增/更新用户</header>
+            <body className="dialog-body">
+                <div className="filed">
+                    <label htmlFor="userName">姓名</label>
+                    <input type="text" id="userName" />
+                </div>
+                <div className="filed">
+                    <label htmlFor="userName">性别</label>
+                    <input type="text" id="userName" />
+                </div>
+                <div className="filed">
+                    <label htmlFor="userName">电话</label>
+                    <input type="text" id="userName" />
+                </div>
+            </body>
+
+            <footer className="dialog-footer">
+                <button type="button" onClick={closeDialog}>
+                    取消
+                </button>
+                <button type="button">确定</button>
+            </footer>
+        </div>
+    );
+}
+
+function App() {
+    const [dialogVisible, setDialogVisible] = useState(false);
+    const [dialogMode, setDialogMode] = useState<UserDialogProps['mode']>('add');
+
+    const openDialog = () => {
+        setDialogVisible(true);
+    };
 
     const [users, setUsers] = useState([
         {
@@ -91,33 +140,39 @@ function App() {
         },
     ]);
 
+    const addUser = () => {
+        setUsers((oldUsers) => [
+            ...oldUsers,
+            {
+                id: 11,
+                familyName: '马',
+                givenName: '飞',
+                gender: 'Male',
+                phone: '2332943750',
+                avatar: 'https://robohash.org/facilisreprehenderitin.png?size=300x300&set=set1',
+            },
+        ]);
+    };
+
+    const deleteUser = (id: number) => {
+        setUsers((oldUsers) => {
+            const copy = oldUsers.slice();
+            const userToDelete = copy.findIndex((oldUsers) => id === oldUsers.id);
+            copy.splice(userToDelete, 1);
+            return copy;
+        });
+    };
+
     return (
         <form className="form">
-            <button
-                type="button"
-                className="add-button"
-                onClick={() => {
-                    // debugger;
-                    setUsers((oldUsers) => [
-                        ...oldUsers,
-                        {
-                            id: 11,
-                            familyName: '薛',
-                            givenName: '萧然',
-                            gender: 'Male',
-                            phone: '7432943750',
-                            avatar: 'https://robohash.org/facilisreprehenderitin.png?size=300x300&set=set1',
-                        },
-                    ]);
-                }}
-            >
+            <button type="button" className="add-button" onClick={addUser}>
                 新增
             </button>
-            <div className={`user-dialog closed`}>
-                <button className="dialog-close-button" type="button" onClick={closeDialog}>
-                    关闭
-                </button>
-            </div>
+            <UserDialog
+                dialogVisible={dialogVisible}
+                setDialogVisible={setDialogVisible}
+                mode={dialogMode}
+            ></UserDialog>
             <table className="user-table">
                 <caption>用户管理表格</caption>
                 <tbody>
@@ -139,8 +194,12 @@ function App() {
                             <td>{user.gender}</td>
                             <td>{user.phone}</td>
                             <td className="operation-col">
-                                <button type="button">更新</button>
-                                <button type="button">删除</button>
+                                <button type="button" onClick={openDialog}>
+                                    更新
+                                </button>
+                                <button type="button" onClick={() => deleteUser(user.id)}>
+                                    删除
+                                </button>
                             </td>
                         </tr>
                     ))}
