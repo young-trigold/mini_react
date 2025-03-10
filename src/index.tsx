@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { App } from './App/index.tsx';
+import { App } from './app/index.tsx';
 import { createRoot, createElement } from './mini_react/react-dom.ts';
 /** @jsx createElement */
 
