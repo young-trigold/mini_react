@@ -43,8 +43,11 @@
         box-shadow: 0 0 5px rgb(0 0 0 / 10%);
         padding: 2em;
         transition: all 0.3s ease-in-out;
+        opacity: 1;
+        visibility: visible;
 
         &.closed {
+            opacity: 0;
             visibility: hidden;
         }
 
@@ -60,10 +63,6 @@
 
                 label {
                     margin-right: 2em;
-
-                    &::after {
-                        content: '：';
-                    }
                 }
             }
         }
