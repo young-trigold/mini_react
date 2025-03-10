@@ -1,6 +1,6 @@
 # 从 0 到 1 实现一个 mini 版的 react
 
-实现内容：（全部使用 typescript）
+## 实现内容：（全部使用 typescript）
 
 - createElement
 - createRoot/render
@@ -8,7 +8,37 @@
 - reconcile
 - 函数组件和 useState
 
-最终效果：
+## 最终效果
+
+- 渲染
+
+<img width="1511" alt="image" src="https://github.com/user-attachments/assets/7a30085d-5439-4ff3-9ac9-3c2dc4a72122" />
+
+- 构建的fiber树
+
+<img width="712" alt="image" src="https://github.com/user-attachments/assets/2ccbe513-2725-489b-b0c5-1dc4f78febac" />
+
+
+- 新增
+
+<img width="1511" alt="image" src="https://github.com/user-attachments/assets/728f3287-3d8d-435c-9d9e-21cb181f45a3" />
+
+<img width="1506" alt="image" src="https://github.com/user-attachments/assets/f9e6ce91-be2b-494c-ad70-2d6da2f3851b" />
+
+
+- 删除
+
+<img width="1489" alt="image" src="https://github.com/user-attachments/assets/2d589453-b1bd-4a1a-98e8-3972de6564f5" />
+
+
+- 更新
+
+<img width="1496" alt="image" src="https://github.com/user-attachments/assets/aaf78b79-0adf-4dd5-bb21-4de194e2e25c" />
+
+<img width="1500" alt="image" src="https://github.com/user-attachments/assets/61192438-9202-406c-98ab-c769d9a91e96" />
+
+<img width="1501" alt="image" src="https://github.com/user-attachments/assets/4230783a-366f-4ea3-8b03-da98ea362aad" />
+
 
 # JSX，createElement 和虚拟 DOM
 
