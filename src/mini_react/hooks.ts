@@ -8,15 +8,15 @@ import { UseState, UseStateHook } from './type.ts';
 export const useState: UseState = <State>(initialState: State) => {
     const oldHook: UseStateHook<State> | undefined =
         miniReact.workInProgressFiber?.alternate?.useStateHooks?.[miniReact.workInProgressFiber!.useStateHookIndex!];
-    const hook: UseStateHook<State> = {
+    const newHook: UseStateHook<State> = {
         state: oldHook ? oldHook.state : initialState,
         actions: [],
     };
     oldHook?.actions?.forEach((action) => {
-        hook.state = action instanceof Function ? action(hook.state) : action;
+        newHook.state = action instanceof Function ? action(newHook.state) : action;
     });
     const setState = (action: (previousState: State) => State) => {
-        hook.actions.push(action);
+        newHook.actions.push(action);
         miniReact.workInProgressRoot = {
             type: 'div',
             dom: miniReact.lastCommittedRoot?.dom,
@@ -26,7 +26,7 @@ export const useState: UseState = <State>(initialState: State) => {
         miniReact.deletedFibers = [];
         miniReact.nextUnitOfWork = miniReact.workInProgressRoot;
     };
-    miniReact.workInProgressFiber?.useStateHooks?.push?.(hook);
+    miniReact.workInProgressFiber?.useStateHooks?.push?.(newHook);
     miniReact.workInProgressFiber!.useStateHookIndex!++;
-    return [hook.state, setState];
+    return [newHook.state, setState];
 };
