@@ -8,13 +8,14 @@ import { UseState, UseStateHook } from './type.ts';
 export const useState: UseState = <State>(initialState: State) => {
     const oldHook: UseStateHook<State> | undefined =
         miniReact.workInProgressFiber?.alternate?.useStateHooks?.[miniReact.workInProgressFiber!.useStateHookIndex!];
+    let state = oldHook ? oldHook.state : initialState;
+    oldHook?.actions?.forEach((action) => {
+        state = action instanceof Function ? action(state) : action;
+    });
     const newHook: UseStateHook<State> = {
-        state: oldHook ? oldHook.state : initialState,
+        state,
         actions: [],
     };
-    oldHook?.actions?.forEach((action) => {
-        newHook.state = action instanceof Function ? action(newHook.state) : action;
-    });
     const setState = (action: (previousState: State) => State) => {
         newHook.actions.push(action);
         miniReact.workInProgressRoot = {
