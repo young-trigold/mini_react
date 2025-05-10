@@ -6,14 +6,16 @@ import { UseState, UseStateHook } from './type.ts';
  * @param initialState 初始状态
  */
 export const useState: UseState = <State>(initialState: State) => {
+    const { workInProgressFiber } = miniReact;
     const oldHook: UseStateHook<State> | undefined =
-        miniReact.workInProgressFiber?.alternate?.useStateHooks?.[miniReact.workInProgressFiber!.useStateHookIndex!];
-    let state = oldHook ? oldHook.state : initialState;
+        workInProgressFiber?.alternate?.useStateHooks?.[workInProgressFiber!.useStateHookIndex!];
+    const oldState = oldHook ? oldHook.state : initialState;
+    let newState = oldState;
     oldHook?.actions?.forEach((action) => {
-        state = action instanceof Function ? action(state) : action;
+        newState = action instanceof Function ? action(newState) : action;
     });
     const newHook: UseStateHook<State> = {
-        state,
+        state: newState,
         actions: [],
     };
     const setState = (action: (previousState: State) => State) => {

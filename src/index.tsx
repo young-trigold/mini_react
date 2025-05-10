@@ -7,7 +7,7 @@ const vDOM = <App />;
 console.log('<App/>：', vDOM);
 
 const root = createRoot(vDOM);
-console.log('正在构建的 fiber 树：', root.root);
+console.log('目前构建的 fiber 树的根：', root.root);
 
 const rootContainer = document.getElementById('app');
 if (rootContainer) root.render(rootContainer);
