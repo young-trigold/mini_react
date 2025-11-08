@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createElement } from '../mini_react/react-dom.ts';
+import { useEffect, useRef } from '../mini_react/hooks.ts';
 /** @jsx createElement */
 import { SetStateAction } from '../mini_react/type.ts';
 import { FormValue, User } from './type.ts';
@@ -15,6 +16,28 @@ export interface UserDialogProps {
 
 export const UserDialog = (props: UserDialogProps) => {
     const { dialogVisible, setDialogVisible, setUsers, mode, formValue, setFormValue } = props;
+
+    /**
+     * 当对话框打开时自动聚焦第一个输入（姓氏），关闭时恢复之前的焦点。
+     * 使用 useRef 保存打开对话框前的活动元素引用。
+     */
+    const previousActiveElementRef = useRef<HTMLElement | null>(null);
+    useEffect(() => {
+        if (dialogVisible) {
+            // 保存当前活动元素
+            previousActiveElementRef.current = document.activeElement as HTMLElement | null;
+            // 打开对话框后聚焦第一个输入框（通过 id 查询）
+            const firstInput = document.getElementById('userFamilyName') as HTMLElement | null;
+            firstInput?.focus?.();
+        } else {
+            // 对话框关闭时恢复之前的焦点
+            try {
+                previousActiveElementRef.current?.focus?.();
+            } catch (e) {
+                // 忽略恢复焦点错误
+            }
+        }
+    }, [dialogVisible]);
 
     const closeDialog = () => {
         setDialogVisible(false);

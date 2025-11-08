@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState } from '../mini_react/hooks.ts';
+import { useState, useEffect } from '../mini_react/hooks.ts';
 import { createElement } from '../mini_react/react-dom.ts';
 /** @jsx createElement */
 import './app.scss';
@@ -99,6 +99,37 @@ export const App = () => {
     };
 
     const [users, setUsers] = useState<User[]>(usersData);
+
+    /**
+     * 同步 users 到 localStorage：
+     * - 首次挂载时尝试从 localStorage 加载已保存的 users（覆盖默认数据）
+     * - 每次 users 变更时同步保存到 localStorage
+     */
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('mini_react_users');
+            if (raw) {
+                const parsed = JSON.parse(raw) as User[];
+                if (Array.isArray(parsed)) {
+                    setUsers(parsed);
+                }
+            }
+        } catch (e) {
+            // 忽略解析错误
+            // eslint-disable-next-line no-console
+            console.error('从 localStorage 加载 users 失败', e);
+        }
+        // 仅在首次挂载时执行
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('mini_react_users', JSON.stringify(users));
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('保存 users 到 localStorage 失败', e);
+        }
+    }, [users]);
 
     const addUser = () => {
         setFormValue(null);

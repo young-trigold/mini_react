@@ -48,6 +48,11 @@ function buildFunctionComponentFibers(fiber: Fiber) {
     miniReact.workInProgressFiber = fiber;
     fiber.useStateHookIndex = 0;
     miniReact.workInProgressFiber.useStateHooks = [];
+    // 初始化 effect/ref hook 的存储和索引
+    fiber.useEffectHookIndex = 0;
+    miniReact.workInProgressFiber.useEffectHooks = [];
+    fiber.useRefHookIndex = 0;
+    miniReact.workInProgressFiber.useRefHooks = [];
     const children = [(fiber.type as (props: Fiber['props']) => Fiber)(fiber.props)];
     reconcileChildren(fiber, children);
 }
@@ -139,6 +144,69 @@ function commit() {
     commitFiber(miniReact.workInProgressRoot!.child);
     miniReact.lastCommittedRoot = miniReact.workInProgressRoot;
     miniReact.workInProgressRoot = null;
+    // 在 commit 完成后，运行 effect 回调
+    runEffects(miniReact.lastCommittedRoot);
+}
+
+/**
+ * 运行所有在渲染阶段收集到的 useEffect 回调
+ * @param root 根 fiber
+ */
+function runEffects(root: Fiber | null | undefined) {
+    if (!root) return;
+    // 深度优先遍历整个 fiber 树，查找 useEffectHooks 并执行需要执行的 effect
+    const stack: (Fiber | null | undefined)[] = [root.child];
+    while (stack.length) {
+        const node = stack.pop();
+        if (!node) continue;
+        // 遍历当前 fiber 的 effect hooks
+        const hooks = node.useEffectHooks ?? [];
+        for (let i = 0; i < hooks.length; i++) {
+            const hook = hooks[i];
+            const oldHook = node.alternate?.useEffectHooks?.[i];
+            const hasNoDeps = hook.deps == null;
+            let shouldRun = false;
+            if (hasNoDeps) shouldRun = true;
+            else if (!oldHook) shouldRun = true;
+            else {
+                // 比较依赖数组（浅比较）
+                const deps = hook.deps as unknown[];
+                const oldDeps = oldHook.deps as unknown[] | undefined | null;
+                if (!oldDeps) shouldRun = true;
+                else if (deps.length !== oldDeps.length) shouldRun = true;
+                else {
+                    for (let k = 0; k < deps.length; k++) {
+                        if (deps[k] !== oldDeps[k]) {
+                            shouldRun = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (shouldRun) {
+                // 如果存在旧的 cleanup，先执行
+                try {
+                    oldHook?.cleanup && oldHook.cleanup();
+                } catch (e) {
+                    // 忽略 cleanup 中的错误
+                    // eslint-disable-next-line no-console
+                    console.error(e);
+                }
+                // 执行 effect，并保存可能返回的 cleanup
+                try {
+                    const cleanup = hook.effect?.();
+                    hook.cleanup = cleanup as (() => void) | void;
+                } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.error(e);
+                }
+            }
+        }
+
+        // 推入子节点和兄弟节点以继续遍历
+        if (node.sibling) stack.push(node.sibling);
+        if (node.child) stack.push(node.child);
+    }
 }
 
 function commitFiber(fiber: Fiber | null | undefined) {
